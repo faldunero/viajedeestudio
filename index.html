@@ -73,6 +73,22 @@
         .tab-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #d1d5db; background: var(--card); font-size: 13px; font-weight: 700; cursor: pointer; color: var(--sub); }
         .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
         .tab-content { display: none; }
+
+        .hamburger-btn { position: fixed; top: 15px; left: 15px; z-index: 1000; width: 46px; height: 46px; border-radius: 12px; border: none; background: var(--card); box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text); }
+        .hamburger-btn:active { transform: scale(0.95); }
+
+        .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1001; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+        .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+
+        .drawer { position: fixed; top: 0; left: 0; height: 100%; width: 78%; max-width: 300px; background: var(--card); z-index: 1002; transform: translateX(-105%); transition: transform 0.28s ease; display: flex; flex-direction: column; padding: 20px 16px; box-shadow: 2px 0 14px rgba(0,0,0,0.2); }
+        .drawer.open { transform: translateX(0); }
+
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid #e5e7eb; }
+        .drawer-header h2 { font-size: 16px; font-weight: 800; }
+        .drawer-close { background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--sub); padding: 4px; }
+
+        .drawer-nav { display: flex; flex-direction: column; gap: 8px; }
+        .drawer-nav .tab-btn { flex: none; text-align: left; font-size: 15px; padding: 13px 14px; display: flex; align-items: center; gap: 10px; border-radius: 10px; }
         .tab-content.active { display: block; }
         .tag.riesgo { background: #fee2e2; color: #991b1b; }
 
@@ -109,13 +125,22 @@
     </div>
     <p class="sub-h1">Buscador y Comparador Móvil</p>
 
-    <div class="tabs">
-        <button class="tab-btn active" data-tab="giras" onclick="cambiarTab('giras')">🚀 Giras</button>
-        <button class="tab-btn" data-tab="beneficios" onclick="cambiarTab('beneficios')">🎁 Beneficios</button>
-        <button class="tab-btn" data-tab="riesgos" onclick="cambiarTab('riesgos')">⚠️ Riesgos</button>
-        <button class="tab-btn" data-tab="ranking" onclick="cambiarTab('ranking')">🏆 Ranking</button>
-        <button class="tab-btn" data-tab="riesgoexcel" onclick="cambiarTab('riesgoexcel')">📊 Riesgo excel</button>
-    </div>
+    <button class="hamburger-btn" onclick="toggleDrawer()" aria-label="Abrir menú">☰</button>
+
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+    <aside class="drawer" id="drawer">
+        <div class="drawer-header">
+            <h2>Menú</h2>
+            <button class="drawer-close" onclick="closeDrawer()" aria-label="Cerrar menú">✕</button>
+        </div>
+        <nav class="drawer-nav">
+            <button class="tab-btn active" data-tab="giras" onclick="cambiarTab('giras'); closeDrawer();">🚀 Giras</button>
+            <button class="tab-btn" data-tab="beneficios" onclick="cambiarTab('beneficios'); closeDrawer();">🎁 Beneficios</button>
+            <button class="tab-btn" data-tab="riesgos" onclick="cambiarTab('riesgos'); closeDrawer();">⚠️ Riesgos</button>
+            <button class="tab-btn" data-tab="ranking" onclick="cambiarTab('ranking'); closeDrawer();">🏆 Ranking</button>
+            <button class="tab-btn" data-tab="riesgoexcel" onclick="cambiarTab('riesgoexcel'); closeDrawer();">📊 Riesgo excel</button>
+        </nav>
+    </aside>
 
     <div id="tab-giras" class="tab-content active">
     <div class="filtros">
@@ -665,6 +690,27 @@ function cambiarTab(tab) {
     document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
     document.getElementById("tab-" + tab).classList.add("active");
     document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add("active");
+}
+
+function openDrawer() {
+    document.getElementById("drawer").classList.add("open");
+    document.getElementById("drawerOverlay").classList.add("open");
+    document.body.style.overflow = "hidden";
+}
+
+function closeDrawer() {
+    document.getElementById("drawer").classList.remove("open");
+    document.getElementById("drawerOverlay").classList.remove("open");
+    document.body.style.overflow = "";
+}
+
+function toggleDrawer() {
+    const drawer = document.getElementById("drawer");
+    if (drawer.classList.contains("open")) {
+        closeDrawer();
+    } else {
+        openDrawer();
+    }
 }
 
 function aceptarDisclaimer() {
