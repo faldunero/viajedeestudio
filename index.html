@@ -95,6 +95,21 @@
 
         .drawer-nav { display: flex; flex-direction: column; gap: 8px; }
         .drawer-nav .tab-btn { flex: none; text-align: left; font-size: 15px; padding: 13px 14px; display: flex; align-items: center; gap: 10px; border-radius: 10px; }
+
+        .resena-card { background: var(--card); border-radius: 15px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .resena-banner { height: 100px; display: flex; align-items: center; justify-content: center; font-size: 46px; }
+        .resena-banner.montana { background: linear-gradient(135deg, #4ade80, #15803d); }
+        .resena-banner.playa-brasil { background: linear-gradient(135deg, #38bdf8, #0369a1); }
+        .resena-banner.bosque { background: linear-gradient(135deg, #22c55e, #14532d); }
+        .resena-banner.isla { background: linear-gradient(135deg, #2dd4bf, #0f766e); }
+        .resena-banner.patagonia { background: linear-gradient(135deg, #93c5fd, #1e3a8a); }
+        .resena-banner.lagos { background: linear-gradient(135deg, #60a5fa, #1d4ed8); }
+        .resena-banner.desierto { background: linear-gradient(135deg, #fb923c, #9a3412); }
+        .resena-banner.caribe { background: linear-gradient(135deg, #5eead4, #d97706); }
+        .resena-body { padding: 16px 18px; }
+        .resena-body h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+        .resena-body p { font-size: 14px; line-height: 1.4; margin-bottom: 8px; }
+        .resena-body b { color: #374151; }
         .tab-content.active { display: block; }
         .tag.riesgo { background: #fee2e2; color: #991b1b; }
 
@@ -145,6 +160,7 @@
             <button class="tab-btn" data-tab="riesgos" onclick="cambiarTab('riesgos'); closeDrawer();">⚠️ Riesgos</button>
             <button class="tab-btn" data-tab="ranking" onclick="cambiarTab('ranking'); closeDrawer();">🏆 Ranking</button>
             <button class="tab-btn" data-tab="riesgoexcel" onclick="cambiarTab('riesgoexcel'); closeDrawer();">📊 Riesgo excel</button>
+            <button class="tab-btn" data-tab="resenas" onclick="cambiarTab('resenas'); closeDrawer();">🗺️ Reseña destinos</button>
         </nav>
     </aside>
 
@@ -278,6 +294,20 @@
         </div>
     </div>
 
+    <div id="tab-resenas" class="tab-content">
+        <p style="font-size: 12px; color: var(--sub); margin-bottom: 12px; line-height: 1.4;">
+            Información general de referencia por destino: ubicación, clima esperado en diciembre y documentación necesaria para viajar como chileno. Siempre conviene confirmar los datos vigentes con la agencia y fuentes oficiales antes del viaje.
+        </p>
+        <div class="filtros">
+            <div class="input-wrapper">
+                <input id="txtResenas" type="text" placeholder="🔍 Buscar por destino..." oninput="renderResenas()">
+                <button type="button" class="input-clear" id="txtResenasClear" onclick="limpiarInput('txtResenas', renderResenas)">✕</button>
+            </div>
+        </div>
+        <div class="results-count">Resultados: <span id="cantResenas">0</span></div>
+        <div id="cardsResenas"></div>
+    </div>
+
 
 <script>
 const programas = [
@@ -315,9 +345,142 @@ const programas = [
     { dest: "Huilo Huilo", tipo: "Nacional", emp: "Meridiano Cero", dias: "5D/4N", transporte: "Ticket aéreo vuelo directo Santiago–Temuco–Santiago, equipaje de bodega 23 kg + mochila, bus exclusivo en destino.", alojamiento: "04 noches en Canopy Village (habitaciones triples o cuádruples).", precio: "$1.110.800", score: "2.2", liberados: "6 (1 cada 10 pagados)", comida: "Pensión completa + dietas especiales, 1 bebida incluida por comida.", seguro: "USD 150.000, deducible $0, prestadores médicos preestablecidos.", acts: "Trekking cavernas volcánicas, Canopy, Rafting, Mountain Bike, Kayak, navegación en la bahía, Salto del Puma.", ben: "6 Liberados, Seguro USD 150k, capa de lluvia.", riesgo: "Crítico Financiero: cancelaciones masivas, retención de dineros, insolvencia." }
 ];
 
-// Detalle a nivel de agencia: por qué tiene esa nota en Google y cuál es
-// su reclamo/riesgo principal documentado (fuente: hojas "Puntaje-comentarios"
-// y "evidencia reclamos" de la planilla de comparación).
+// Reseña informativa por destino: ubicación/distancia desde Santiago, clima en
+// diciembre (mes del viaje), documentación requerida para chilenos y otros datos
+// prácticos. Es información general de referencia; siempre conviene confirmar
+// con la agencia y fuentes oficiales antes de viajar.
+const resenas = [
+    {
+        dest: "Bariloche",
+        categoria: "montana",
+        emoji: "🏔️",
+        ubicacion: "San Carlos de Bariloche, provincia de Río Negro, Patagonia argentina, a orillas del lago Nahuel Huapi.",
+        distancia: "~700 km al sureste de Santiago (línea recta). Vuelo directo: aprox. 1h20-1h30.",
+        clima: "Inicio de verano patagónico: entre 8°C y 22°C aprox. Días soleados pero con viento y cambios bruscos de clima; no descartar lluvia.",
+        documentacion: "Solo cédula de identidad chilena vigente. No requiere pasaporte ni visa (acuerdo de tránsito Chile-Argentina).",
+        otros: "Moneda: peso argentino. Zona horaria igual a Chile continental en esta fecha. Conviene llevar algo de efectivo en pesos argentinos para gastos menores."
+    },
+    {
+        dest: "Camboriú",
+        categoria: "playa-brasil",
+        emoji: "🏖️",
+        ubicacion: "Balneário Camboriú, estado de Santa Catarina, costa sur de Brasil.",
+        distancia: "~3.000 km desde Santiago. Vuelo directo a Florianópolis (~4h) + traslado terrestre de ~1h-1h30.",
+        clima: "Pleno verano brasileño: entre 24°C y 32°C, alta humedad. Posibles chubascos tropicales breves por la tarde.",
+        documentacion: "Solo cédula de identidad chilena vigente. No requiere pasaporte ni visa.",
+        otros: "Moneda: real brasileño (BRL). Recomendable protector solar alto y repelente de mosquitos."
+    },
+    {
+        dest: "Florianópolis",
+        categoria: "playa-brasil",
+        emoji: "🏖️",
+        ubicacion: "Isla de Santa Catarina, capital del estado de Santa Catarina, sur de Brasil.",
+        distancia: "~3.000 km desde Santiago. Vuelo directo: aprox. 4h.",
+        clima: "Verano brasileño: entre 24°C y 30°C, húmedo, con posibilidad de lluvias breves.",
+        documentacion: "Solo cédula de identidad chilena vigente. No requiere pasaporte ni visa.",
+        otros: "Moneda: real brasileño (BRL). Muchas playas y zonas turísticas; conviene llevar protector solar y repelente."
+    },
+    {
+        dest: "Huilo Huilo",
+        categoria: "bosque",
+        emoji: "🌲",
+        ubicacion: "Reserva Biológica Huilo Huilo, comuna de Panguipulli, Región de Los Ríos, sur de Chile.",
+        distancia: "~850 km desde Santiago. Vuelo a Temuco (~1h15) + traslado terrestre de ~2h.",
+        clima: "Inicio de verano austral en bosque valdiviano: entre 12°C y 24°C, con posibilidad de lluvia y humedad alta.",
+        documentacion: "Viaje 100% nacional. Solo cédula de identidad, sin trámites adicionales.",
+        otros: "Zona de bosque nativo y volcanes; recomendable calzado de trekking y ropa de abrigo para la noche."
+    },
+    {
+        dest: "Huilo Huilo - Pucón",
+        categoria: "bosque",
+        emoji: "🌲",
+        ubicacion: "Combina la Reserva Huilo Huilo (Región de Los Ríos) con Pucón, a orillas del lago Villarrica (Región de la Araucanía).",
+        distancia: "~800-850 km desde Santiago. Vuelo a Temuco (~1h15) + traslados terrestres entre ambos puntos.",
+        clima: "Inicio de verano: entre 10°C y 24°C, con lluvias posibles en el sector de bosque y clima algo más estable en Pucón.",
+        documentacion: "Viaje 100% nacional. Solo cédula de identidad, sin trámites adicionales.",
+        otros: "Itinerario con harto traslado en bus; conviene ropa en capas para adaptarse a los cambios entre ambos destinos."
+    },
+    {
+        dest: "Huilo Huilo - Puerto Varas - Chiloé",
+        categoria: "bosque",
+        emoji: "🌲",
+        ubicacion: "Recorre la Reserva Huilo Huilo (Los Ríos), Puerto Varas/Ensenada (Los Lagos) y la Isla de Chiloé.",
+        distancia: "~850-1.100 km desde Santiago. Vuelo a Temuco o Puerto Montt + traslados terrestres entre cada punto.",
+        clima: "Inicio de verano en el sur: entre 10°C y 22°C, clima lluvioso y variable, típico de la zona de lagos y bosque valdiviano.",
+        documentacion: "Viaje 100% nacional. Solo cédula de identidad, sin trámites adicionales.",
+        otros: "Itinerario con varios traslados largos en bus y una travesía en transbordador a Chiloé; conviene llevar cortavientos e impermeable."
+    },
+    {
+        dest: "Isla de Pascua",
+        categoria: "isla",
+        emoji: "🗿",
+        ubicacion: "Isla de Pascua (Rapa Nui), territorio insular chileno en medio del océano Pacífico.",
+        distancia: "~3.700 km desde Santiago. Vuelo directo: aprox. 5h30.",
+        clima: "Clima oceánico templado, inicio de temporada más seca: entre 18°C y 24°C aprox.",
+        documentacion: "Viaje nacional: cédula de identidad. Se debe completar la Declaración de Destino Turístico Rapa Nui (SAG) antes de embarcar.",
+        otros: "Control agrícola estricto en el aeropuerto (no se puede ingresar frutas, verduras ni semillas). Entrada al Parque Nacional Rapa Nui tiene costo aparte."
+    },
+    {
+        dest: "Pucón",
+        categoria: "montana",
+        emoji: "🌋",
+        ubicacion: "A orillas del lago Villarrica, comuna de Pucón, Región de la Araucanía, sur de Chile.",
+        distancia: "~780 km desde Santiago. Vuelo a Temuco (~1h15) + traslado terrestre de ~1h.",
+        clima: "Inicio de verano: entre 10°C y 25°C, generalmente buen tiempo con posibilidad de lluvias esporádicas.",
+        documentacion: "Viaje 100% nacional. Solo cédula de identidad, sin trámites adicionales.",
+        otros: "Zona de actividades de aventura (volcán, rafting, canopy); conviene contar con seguro de accidentes."
+    },
+    {
+        dest: "Puerto Natales - Torres del Paine - Glaciar Grey",
+        categoria: "patagonia",
+        emoji: "🧊",
+        ubicacion: "Provincia de Última Esperanza, Región de Magallanes y de la Antártica Chilena, Patagonia extrema.",
+        distancia: "~3.000 km desde Santiago. Vuelo directo a Puerto Natales: aprox. 3h30.",
+        clima: "Verano patagónico corto y muy variable: entre 5°C y 18°C, vientos fuertes casi constantes, posibilidad de lluvia o nieve en la cordillera.",
+        documentacion: "Viaje 100% nacional. Solo cédula de identidad, sin trámites adicionales.",
+        otros: "El clima cambia muy rápido; es indispensable ropa técnica en capas, cortavientos e impermeable, incluso en verano."
+    },
+    {
+        dest: "Puerto Varas",
+        categoria: "lagos",
+        emoji: "🏞️",
+        ubicacion: "A orillas del lago Llanquihue, frente al volcán Osorno, Región de Los Lagos, sur de Chile.",
+        distancia: "~1.000 km desde Santiago. Vuelo a Puerto Montt (~1h40) + traslado corto.",
+        clima: "Inicio de verano en zona de lagos: entre 10°C y 22°C, clima templado lluvioso.",
+        documentacion: "Viaje 100% nacional. Solo cédula de identidad, sin trámites adicionales.",
+        otros: "Puede llover incluso en verano; conviene llevar impermeable liviano además de ropa de abrigo."
+    },
+    {
+        dest: "República Dominicana (Punta Cana/Bayaribe)",
+        categoria: "caribe",
+        emoji: "🏝️",
+        ubicacion: "Costa este de República Dominicana, Mar Caribe (zona de Punta Cana/Bávaro).",
+        distancia: "~6.700 km desde Santiago. Vuelo directo: aprox. 8h (o 10-11h con escalas).",
+        clima: "Tropical cálido, inicio de temporada seca: entre 24°C y 30°C, alta humedad y posibilidad de lluvias breves.",
+        documentacion: "Pasaporte chileno vigente (mínimo 6 meses de vigencia). No requiere visa de turismo para estadías de hasta 30 días; la tarjeta de turista suele venir incluida en el pasaje aéreo.",
+        otros: "Moneda: peso dominicano (el dólar también se acepta ampliamente). Recomendable repelente de mosquitos y protector solar de alto factor."
+    },
+    {
+        dest: "San Pedro",
+        categoria: "desierto",
+        emoji: "🏜️",
+        ubicacion: "San Pedro de Atacama, Región de Antofagasta, desierto de Atacama, norte de Chile.",
+        distancia: "~1.600 km desde Santiago. Vuelo a Calama (~2h) + traslado terrestre de ~1h30.",
+        clima: "Clima desértico: días calurosos (25°C-30°C) y noches frías (5°C-10°C), muy baja humedad y fuerte radiación UV.",
+        documentacion: "Viaje 100% nacional. Solo cédula de identidad, sin trámites adicionales.",
+        otros: "Gran amplitud térmica entre el día y la noche: llevar protector solar alto, gorro y también ropa de abrigo."
+    },
+    {
+        dest: "Torres del Paine",
+        categoria: "patagonia",
+        emoji: "🧊",
+        ubicacion: "Parque Nacional Torres del Paine, Región de Magallanes y de la Antártica Chilena, Patagonia chilena.",
+        distancia: "~3.000 km desde Santiago. Vuelo a Puerto Natales o Punta Arenas + traslado terrestre al parque.",
+        clima: "Verano patagónico corto y muy variable: entre 5°C y 18°C, vientos fuertes casi constantes, posibilidad de lluvia o nieve en la cordillera.",
+        documentacion: "Viaje 100% nacional. Solo cédula de identidad, sin trámites adicionales.",
+        otros: "El clima cambia muy rápido; es indispensable ropa técnica en capas, cortavientos e impermeable, incluso en verano."
+    }
+];
 const agencyInfo = {
     "Panam": {
         motivoNota: "4.0 en Google, la segunda mejor nota del grupo. Sin embargo tiene el antecedente más grave del listado: un caso sanitario documentado en 2024.",
@@ -746,6 +909,28 @@ function renderRiesgoExcel() {
     `).join("");
 }
 
+function renderResenas() {
+    const txt = normalizar(document.getElementById("txtResenas").value.trim());
+
+    const filtrados = resenas.filter(r => !txt || normalizar(r.dest).includes(txt));
+
+    document.getElementById("cantResenas").textContent = filtrados.length;
+
+    document.getElementById("cardsResenas").innerHTML = filtrados.map(r => `
+        <div class="resena-card">
+            <div class="resena-banner ${r.categoria}">${r.emoji}</div>
+            <div class="resena-body">
+                <h3>📍 ${r.dest}</h3>
+                <p><b>Ubicación:</b> ${r.ubicacion}</p>
+                <p><b>Distancia desde Santiago:</b> ${r.distancia}</p>
+                <p><b>🌡️ Clima en diciembre:</b> ${r.clima}</p>
+                <p><b>🛂 Documentación (chilenos):</b> ${r.documentacion}</p>
+                <p><b>ℹ️ Otra información:</b> ${r.otros}</p>
+            </div>
+        </div>
+    `).join("");
+}
+
 function cambiarTab(tab) {
     document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
     document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
@@ -784,7 +969,7 @@ function limpiarInput(inputId, callback) {
 }
 
 function activarBotonesLimpiar() {
-    ["txt", "txtBeneficios", "txtRiesgos", "txtRiesgoExcel"].forEach(inputId => {
+    ["txt", "txtBeneficios", "txtRiesgos", "txtRiesgoExcel", "txtResenas"].forEach(inputId => {
         const input = document.getElementById(inputId);
         const clearBtn = document.getElementById(inputId + "Clear");
         if (!input || !clearBtn) return;
@@ -807,6 +992,7 @@ renderChipsEmpresas();
 renderRanking();
 activarBotonesLimpiar();
 renderRiesgoExcel();
+renderResenas();
 
 // Toggle para el bloque estático de iTravel (fuera del render dinámico de #cards)
 document.querySelector('[data-toggle="itravel"]').addEventListener("click", () => {
