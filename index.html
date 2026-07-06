@@ -21,6 +21,12 @@
         .filtros { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
         input, select { width: 100%; padding: 12px 15px; border: 1px solid #d1d5db; border-radius: 10px; background: var(--card); font-size: 16px; appearance: none; -webkit-appearance: none; }
         input:focus, select:focus { outline: 2px solid #93c5fd; border-color: var(--primary); }
+
+        .input-wrapper { position: relative; width: 100%; }
+        .input-wrapper input { padding-right: 40px; }
+        .input-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border: none; background: #e5e7eb; color: var(--sub); border-radius: 50%; font-size: 14px; line-height: 1; cursor: pointer; display: none; align-items: center; justify-content: center; }
+        .input-clear.show { display: flex; }
+        .input-clear:active { background: #d1d5db; }
         
         #cards { display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px; }
         
@@ -150,7 +156,16 @@
             <option value="Nacional">Nacional</option>
             <option value="Internacional">Internacional</option>
         </select>
-        <input id="txt" type="text" placeholder="🔍 Buscar por texto (Agencia, actividad...)" oninput="filtrar()">
+        <select id="selOrdenGiras" onchange="filtrar()">
+            <option value="">↕️ Ordenar por: Relevancia</option>
+            <option value="nota">⭐ Nota (mayor a menor)</option>
+            <option value="alfabetico">🔤 Alfabético (A-Z)</option>
+            <option value="valor">💰 Valor (menor a mayor)</option>
+        </select>
+        <div class="input-wrapper">
+            <input id="txt" type="text" placeholder="🔍 Buscar por texto (Agencia, actividad...)" oninput="filtrar()">
+            <button type="button" class="input-clear" id="txtClear" onclick="limpiarInput('txt', filtrar)">✕</button>
+        </div>
     </div>
 
     <div class="results-count">Resultados: <span id="cant">0</span></div>
@@ -193,7 +208,10 @@
 
     <div id="tab-beneficios" class="tab-content">
         <div class="filtros">
-            <input id="txtBeneficios" type="text" placeholder="🔍 Buscar por empresa, seguro, regalo..." oninput="renderBeneficios()">
+            <div class="input-wrapper">
+                <input id="txtBeneficios" type="text" placeholder="🔍 Buscar por empresa, seguro, regalo..." oninput="renderBeneficios()">
+                <button type="button" class="input-clear" id="txtBeneficiosClear" onclick="limpiarInput('txtBeneficios', renderBeneficios)">✕</button>
+            </div>
         </div>
         <div class="results-count">Resultados: <span id="cantBeneficios">0</span></div>
         <div id="cardsBeneficios" style="display:flex; flex-direction:column; gap:15px;"></div>
@@ -201,7 +219,10 @@
 
     <div id="tab-riesgos" class="tab-content">
         <div class="filtros">
-            <input id="txtRiesgos" type="text" placeholder="🔍 Buscar por empresa, categoría, detalle..." oninput="renderRiesgos()">
+            <div class="input-wrapper">
+                <input id="txtRiesgos" type="text" placeholder="🔍 Buscar por empresa, categoría, detalle..." oninput="renderRiesgos()">
+                <button type="button" class="input-clear" id="txtRiesgosClear" onclick="limpiarInput('txtRiesgos', renderRiesgos)">✕</button>
+            </div>
         </div>
         <div class="results-count">Resultados: <span id="cantRiesgos">0</span></div>
         <div id="cardsRiesgos" style="display:flex; flex-direction:column; gap:15px;"></div>
@@ -236,7 +257,10 @@
                 <option value="prestigio">Ordenar por: Prestigio agencia</option>
                 <option value="duracion">Ordenar por: Duración</option>
             </select>
-            <input id="txtRiesgoExcel" type="text" placeholder="🔍 Buscar por agencia, destino o país..." oninput="renderRiesgoExcel()">
+            <div class="input-wrapper">
+                <input id="txtRiesgoExcel" type="text" placeholder="🔍 Buscar por agencia, destino o país..." oninput="renderRiesgoExcel()">
+                <button type="button" class="input-clear" id="txtRiesgoExcelClear" onclick="limpiarInput('txtRiesgoExcel', renderRiesgoExcel)">✕</button>
+            </div>
         </div>
         <div class="results-count">Resultados: <span id="cantRiesgoExcel">0</span></div>
         <div id="cardsRiesgoExcel" style="display:flex; flex-direction:column; gap:15px;"></div>
@@ -409,10 +433,29 @@ function normalizar(str) {
         .replace(/[\u0300-\u036f]/g, ""); // elimina diacríticos
 }
 
+// Extrae un valor numérico comparable desde el string de precio (para poder ordenar).
+// Toma el monto "desde" (el primer número del rango) y, si está en USD, aplica una
+// conversión aproximada a CLP solo para poder comparar contra precios en pesos.
+// Esto NO afecta el precio mostrado en pantalla, solo el orden.
+function parsePrecioValor(precioStr) {
+    const esUSD = /USD/i.test(precioStr);
+    const match = precioStr.match(/\d[\d.]*k?/);
+    if (!match) return Infinity;
+    let token = match[0];
+    const esK = token.endsWith("k");
+    if (esK) token = token.slice(0, -1);
+    let numero = parseInt(token.replace(/\./g, ""), 10);
+    if (isNaN(numero)) return Infinity;
+    if (esK) numero *= 1000;
+    if (esUSD) numero *= 950; // tasa aproximada CLP/USD, solo para efectos de orden
+    return numero;
+}
+
 function filtrar() {
     const txt = normalizar(document.getElementById("txt").value.trim());
     const destSelected = selectDest.value;
     const tipoSelected = document.getElementById("selTipo").value;
+    const ordenSelected = document.getElementById("selOrdenGiras").value;
 
     const filtrados = programas.filter(p => {
         // Validación estricta para los selectores si tienen un valor seleccionado
@@ -437,6 +480,14 @@ function filtrar() {
 
         return matchesDest && matchesTipo && matchesTxt;
     });
+
+    if (ordenSelected === "nota") {
+        filtrados.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
+    } else if (ordenSelected === "alfabetico") {
+        filtrados.sort((a, b) => normalizar(a.dest).localeCompare(normalizar(b.dest)));
+    } else if (ordenSelected === "valor") {
+        filtrados.sort((a, b) => parsePrecioValor(a.precio) - parsePrecioValor(b.precio));
+    }
 
     document.getElementById("cant").textContent = filtrados.length;
     const cardsDiv = document.getElementById("cards");
@@ -723,6 +774,26 @@ function toggleDrawer() {
     }
 }
 
+function limpiarInput(inputId, callback) {
+    const input = document.getElementById(inputId);
+    input.value = "";
+    const clearBtn = document.getElementById(inputId + "Clear");
+    if (clearBtn) clearBtn.classList.remove("show");
+    callback();
+    input.focus();
+}
+
+function activarBotonesLimpiar() {
+    ["txt", "txtBeneficios", "txtRiesgos", "txtRiesgoExcel"].forEach(inputId => {
+        const input = document.getElementById(inputId);
+        const clearBtn = document.getElementById(inputId + "Clear");
+        if (!input || !clearBtn) return;
+        const toggle = () => clearBtn.classList.toggle("show", input.value.length > 0);
+        input.addEventListener("input", toggle);
+        toggle();
+    });
+}
+
 function aceptarDisclaimer() {
     document.getElementById("disclaimerOverlay").remove();
     document.body.style.overflow = "";
@@ -734,6 +805,7 @@ renderBeneficios();
 renderRiesgos();
 renderChipsEmpresas();
 renderRanking();
+activarBotonesLimpiar();
 renderRiesgoExcel();
 
 // Toggle para el bloque estático de iTravel (fuera del render dinámico de #cards)
