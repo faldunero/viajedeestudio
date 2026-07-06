@@ -419,11 +419,21 @@ function filtrar() {
         const matchesDest = !destSelected || p.dest === destSelected;
         const matchesTipo = !tipoSelected || p.tipo === tipoSelected;
 
-        // El campo de texto busca coincidencias parciales, ignorando tildes
+        // El campo de texto busca coincidencias parciales, ignorando tildes, en todos los campos relevantes
         const matchesTxt = !txt ||
             normalizar(p.dest).includes(txt) ||
             normalizar(p.emp).includes(txt) ||
-            normalizar(p.acts).includes(txt);
+            normalizar(p.acts).includes(txt) ||
+            normalizar(p.comida).includes(txt) ||
+            normalizar(p.seguro).includes(txt) ||
+            normalizar(p.transporte).includes(txt) ||
+            normalizar(p.alojamiento).includes(txt) ||
+            normalizar(p.precio).includes(txt) ||
+            normalizar(p.dias).includes(txt) ||
+            normalizar(p.tipo).includes(txt) ||
+            normalizar(p.liberados).includes(txt) ||
+            normalizar(p.ben).includes(txt) ||
+            normalizar(p.riesgo).includes(txt);
 
         return matchesDest && matchesTipo && matchesTxt;
     });
