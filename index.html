@@ -114,6 +114,7 @@
         <button class="tab-btn" data-tab="beneficios" onclick="cambiarTab('beneficios')">🎁 Beneficios</button>
         <button class="tab-btn" data-tab="riesgos" onclick="cambiarTab('riesgos')">⚠️ Riesgos</button>
         <button class="tab-btn" data-tab="ranking" onclick="cambiarTab('ranking')">🏆 Ranking</button>
+        <button class="tab-btn" data-tab="riesgoexcel" onclick="cambiarTab('riesgoexcel')">📊 Riesgo excel</button>
     </div>
 
     <div id="tab-giras" class="tab-content active">
@@ -196,6 +197,38 @@
         </p>
         <div id="cardsRanking" style="display:flex; flex-direction:column; gap:15px;"></div>
     </div>
+
+    <div id="tab-riesgoexcel" class="tab-content">
+        <p style="font-size: 12px; color: var(--sub); margin-bottom: 12px; line-height: 1.4;">
+            Ranking destino-neutral tomado de la hoja <b>"Evaluación General"</b> de la planilla Excel: compara los 31 programas cotizados sin privilegiar ningún destino, evaluando Valor (CLP/noche), Seguro, Confiabilidad y Prestigio de la agencia, y Duración del viaje.
+        </p>
+        <div class="filtros">
+            <select id="selOrdenExcel" onchange="renderRiesgoExcel()">
+                <option value="ranking">Ordenar por: Ranking Excel</option>
+                <option value="valor">Ordenar por: Valor (CLP/noche)</option>
+                <option value="seguro">Ordenar por: Seguro</option>
+                <option value="confiabilidad">Ordenar por: Confiabilidad agencia</option>
+                <option value="prestigio">Ordenar por: Prestigio agencia</option>
+                <option value="duracion">Ordenar por: Duración</option>
+            </select>
+            <input id="txtRiesgoExcel" type="text" placeholder="🔍 Buscar por agencia, destino o país..." oninput="renderRiesgoExcel()">
+        </div>
+        <div class="results-count">Resultados: <span id="cantRiesgoExcel">0</span></div>
+        <div id="cardsRiesgoExcel" style="display:flex; flex-direction:column; gap:15px;"></div>
+
+        <div class="card" style="margin-top: 10px;">
+            <div class="card-header">
+                <div class="empresa-info"><h3>📖 Lectura del ranking</h3></div>
+            </div>
+            <div class="card-body">
+                <p><b>Top 5:</b> 1° Latitud 90 – Florianópolis (8D/7N), 2° Panam – Bariloche (7D/6N), 3° Latitud 90 – Camboriú (8D/7N), 4° Panam – Camboriú (8D/7N), 5° Funtour – Camboriú (8D/7N). Los programas largos e internacionales encabezan la lista: combinan buena duración, seguro fuerte y un CLP/noche competitivo.</p>
+                <p><b>Mejor valor nacional:</b> Panam – Bariloche (#2) y Funtour – Pucón 6D/5N (#6, el más barato por noche, $176.000). Son buenas opciones si se prioriza presupuesto sin salir tan lejos.</p>
+                <p><b>Últimos lugares:</b> Latitud 90 – Puerto Natales/Torres del Paine/Glaciar Grey (#30) y los programas nacionales cortos de Latitud 90 caen por su seguro más bajo (USD 60.000) y pocas noches. Meridiano Cero arrastra en todo su rango por su menor confiabilidad y prestigio de agencia.</p>
+                <p style="font-size: 12px; color: var(--sub); margin-top: 4px;">El ranking de la planilla es dinámico: si se cambian las ponderaciones, los puntajes de seguro o el tipo de cambio, el orden se recalcula. Esta pestaña muestra una fotografía fija de esos resultados, no es una auditoría financiera oficial.</p>
+            </div>
+        </div>
+    </div>
+
 
 <script>
 const programas = [
@@ -295,7 +328,45 @@ const ranking = [
       nota: "No tiene ruta cotizada en este listado. Su reclamo es la falta de respaldo gremial (ACHET/IATA), lo que genera incertidumbre pero no evidencia directa de problemas financieros." }
 ];
 
-// Cargar destinos de forma alfabética
+// Datos de la hoja "Evaluación General" de la planilla de comparación:
+// ranking destino-neutral de los 32 programas de Hoja1 (columnas #, Agencia,
+// Destino, País, Noches, Moneda, Precio mín/máx, Precio prom CLP, CLP/noche,
+// Valor, Seguro, Confiab. agencia, Prestigio agencia, Duración, Puntaje final, Ranking).
+const evaluacionGeneral = [
+    { rank: 2,  emp: "Panam", dest: "Bariloche", pais: "Argentina", noches: 6, moneda: "CLP", precioMin: 1239000, precioMax: 1239000, clpNoche: 206500, valor: 4.44, seguro: 4, confiabilidad: 3, prestigio: 5, duracion: 3.67, puntaje: 4.03 },
+    { rank: 4,  emp: "Panam", dest: "Camboriú", pais: "Brasil", noches: 7, moneda: "USD", precioMin: 1809, precioMax: 1909, clpNoche: 252293, valor: 3.60, seguro: 4, confiabilidad: 3, prestigio: 5, duracion: 5, puntaje: 3.98 },
+    { rank: 26, emp: "Panam", dest: "Isla de Pascua", pais: "Chile", noches: 4, moneda: "CLP", precioMin: 1579000, precioMax: 1579000, clpNoche: 394750, valor: 1.00, seguro: 4, confiabilidad: 3, prestigio: 5, duracion: 1, puntaje: 2.60 },
+    { rank: 11, emp: "Funtour", dest: "Bariloche", pais: "Argentina", noches: 5, moneda: "CLP", precioMin: 1117000, precioMax: 1250000, clpNoche: 236700, valor: 3.89, seguro: 4, confiabilidad: 3, prestigio: 4, duracion: 2.33, puntaje: 3.52 },
+    { rank: 10, emp: "Funtour", dest: "Bariloche", pais: "Argentina", noches: 6, moneda: "CLP", precioMin: 1479000, precioMax: 1579000, clpNoche: 254833, valor: 3.56, seguro: 4, confiabilidad: 3, prestigio: 4, duracion: 3.67, puntaje: 3.62 },
+    { rank: 16, emp: "Funtour", dest: "Camboriú", pais: "Brasil", noches: 5, moneda: "CLP", precioMin: 1649000, precioMax: 1850000, clpNoche: 349900, valor: 1.82, seguro: 5, confiabilidad: 3, prestigio: 4, duracion: 2.33, puntaje: 3.10 },
+    { rank: 5,  emp: "Funtour", dest: "Camboriú", pais: "Brasil", noches: 7, moneda: "CLP", precioMin: 1850000, precioMax: 2070000, clpNoche: 280000, valor: 3.10, seguro: 5, confiabilidad: 3, prestigio: 4, duracion: 5, puntaje: 3.88 },
+    { rank: 13, emp: "Funtour", dest: "Pucón", pais: "Chile", noches: 4, moneda: "CLP", precioMin: 965000, precioMax: 965000, clpNoche: 241250, valor: 3.81, seguro: 4, confiabilidad: 3, prestigio: 4, duracion: 1, puntaje: 3.29 },
+    { rank: 6,  emp: "Funtour", dest: "Pucón", pais: "Chile", noches: 5, moneda: "CLP", precioMin: 880000, precioMax: 880000, clpNoche: 176000, valor: 5.00, seguro: 4, confiabilidad: 3, prestigio: 4, duracion: 2.33, puntaje: 3.85 },
+    { rank: 22, emp: "Latitud 90", dest: "San Pedro de Atacama", pais: "Chile", noches: 4, moneda: "CLP", precioMin: 1071000, precioMax: 1071000, clpNoche: 267750, valor: 3.32, seguro: 2, confiabilidad: 3, prestigio: 4, duracion: 1, puntaje: 2.75 },
+    { rank: 25, emp: "Latitud 90", dest: "San Pedro de Atacama", pais: "Chile", noches: 4, moneda: "CLP", precioMin: 1135000, precioMax: 1135000, clpNoche: 283750, valor: 3.03, seguro: 2, confiabilidad: 3, prestigio: 4, duracion: 1, puntaje: 2.66 },
+    { rank: 18, emp: "Latitud 90", dest: "Huilo Huilo - Puerto Varas - Chiloé", pais: "Chile", noches: 5, moneda: "CLP", precioMin: 1294000, precioMax: 1294000, clpNoche: 258800, valor: 3.49, seguro: 2, confiabilidad: 3, prestigio: 4, duracion: 2.33, puntaje: 3.00 },
+    { rank: 28, emp: "Latitud 90", dest: "Torres del Paine", pais: "Chile", noches: 4, moneda: "CLP", precioMin: 1368000, precioMax: 1368000, clpNoche: 342000, valor: 1.96, seguro: 2, confiabilidad: 3, prestigio: 4, duracion: 1, puntaje: 2.34 },
+    { rank: 31, emp: "Latitud 90", dest: "Puerto Natales - Torres del Paine - Glaciar Grey", pais: "Chile", noches: 4, moneda: "CLP", precioMin: 1532000, precioMax: 1532000, clpNoche: 383000, valor: 1.21, seguro: 2, confiabilidad: 3, prestigio: 4, duracion: 1, puntaje: 2.11 },
+    { rank: 3,  emp: "Latitud 90", dest: "Camboriú", pais: "Brasil", noches: 7, moneda: "USD", precioMin: 1874, precioMax: 1874, clpNoche: 254329, valor: 3.57, seguro: 5, confiabilidad: 3, prestigio: 4, duracion: 5, puntaje: 4.02 },
+    { rank: 8,  emp: "Latitud 90", dest: "Camboriú", pais: "Brasil", noches: 6, moneda: "USD", precioMin: 1792, precioMax: 1792, clpNoche: 283733, valor: 3.03, seguro: 5, confiabilidad: 3, prestigio: 4, duracion: 3.67, puntaje: 3.66 },
+    { rank: 1,  emp: "Latitud 90", dest: "Florianópolis", pais: "Brasil", noches: 7, moneda: "USD", precioMin: 1741, precioMax: 1741, clpNoche: 236279, valor: 3.90, seguro: 5, confiabilidad: 3, prestigio: 4, duracion: 5, puntaje: 4.12 },
+    { rank: 7,  emp: "Latitud 90", dest: "Florianópolis", pais: "Brasil", noches: 6, moneda: "USD", precioMin: 1652, precioMax: 1652, clpNoche: 261567, valor: 3.44, seguro: 5, confiabilidad: 3, prestigio: 4, duracion: 3.67, puntaje: 3.78 },
+    { rank: 12, emp: "Meridiano Cero", dest: "Camboriú", pais: "Brasil", noches: 7, moneda: "CLP", precioMin: 1660000, precioMax: 1970000, clpNoche: 259286, valor: 3.48, seguro: 4, confiabilidad: 2, prestigio: 3, duracion: 5, puntaje: 3.44 },
+    { rank: 15, emp: "Meridiano Cero", dest: "Camboriú", pais: "Brasil", noches: 6, moneda: "CLP", precioMin: 1550000, precioMax: 1860000, clpNoche: 284167, valor: 3.02, seguro: 4, confiabilidad: 2, prestigio: 3, duracion: 3.67, puntaje: 3.11 },
+    { rank: 23, emp: "Meridiano Cero", dest: "Camboriú", pais: "Brasil", noches: 5, moneda: "CLP", precioMin: 1440000, precioMax: 1750000, clpNoche: 319000, valor: 2.39, seguro: 4, confiabilidad: 2, prestigio: 3, duracion: 2.33, puntaje: 2.72 },
+    { rank: 30, emp: "Meridiano Cero", dest: "Camboriú", pais: "Brasil", noches: 4, moneda: "CLP", precioMin: 1330000, precioMax: 1640000, clpNoche: 371250, valor: 1.43, seguro: 4, confiabilidad: 2, prestigio: 3, duracion: 1, puntaje: 2.23 },
+    { rank: 21, emp: "Meridiano Cero", dest: "República Dominicana (Punta Cana/Bayaribe)", pais: "R. Dominicana", noches: 6, moneda: "USD", precioMin: 2150, precioMax: 2150, clpNoche: 340417, valor: 1.99, seguro: 4, confiabilidad: 2, prestigio: 3, duracion: 3.67, puntaje: 2.80 },
+    { rank: 29, emp: "Meridiano Cero", dest: "Isla de Pascua", pais: "Chile", noches: 4, moneda: "CLP", precioMin: 1460000, precioMax: 1460000, clpNoche: 365000, valor: 1.54, seguro: 4, confiabilidad: 2, prestigio: 3, duracion: 1, puntaje: 2.26 },
+    { rank: 24, emp: "Meridiano Cero", dest: "Isla de Pascua", pais: "Chile", noches: 5, moneda: "CLP", precioMin: 1600000, precioMax: 1600000, clpNoche: 320000, valor: 2.37, seguro: 4, confiabilidad: 2, prestigio: 3, duracion: 2.33, puntaje: 2.71 },
+    { rank: 20, emp: "Meridiano Cero", dest: "Pucón", pais: "Chile", noches: 4, moneda: "CLP", precioMin: 1050800, precioMax: 1050800, clpNoche: 262700, valor: 3.41, seguro: 4, confiabilidad: 2, prestigio: 3, duracion: 1, puntaje: 2.82 },
+    { rank: 17, emp: "Meridiano Cero", dest: "Puerto Varas", pais: "Chile", noches: 5, moneda: "CLP", precioMin: 1150800, precioMax: 1150800, clpNoche: 230160, valor: 4.01, seguro: 3, confiabilidad: 2, prestigio: 3, duracion: 2.33, puntaje: 3.00 },
+    { rank: 14, emp: "Meridiano Cero", dest: "Huilo Huilo - Pucón", pais: "Chile", noches: 6, moneda: "CLP", precioMin: 1330800, precioMax: 1330800, clpNoche: 221800, valor: 4.16, seguro: 3, confiabilidad: 2, prestigio: 3, duracion: 3.67, puntaje: 3.25 },
+    { rank: 19, emp: "Meridiano Cero", dest: "Huilo Huilo", pais: "Chile", noches: 5, moneda: "CLP", precioMin: 1260000, precioMax: 1260000, clpNoche: 252000, valor: 3.61, seguro: 3, confiabilidad: 2, prestigio: 3, duracion: 2.33, puntaje: 2.88 },
+    { rank: 27, emp: "Meridiano Cero", dest: "Huilo Huilo", pais: "Chile", noches: 4, moneda: "CLP", precioMin: 1110800, precioMax: 1110800, clpNoche: 277700, valor: 3.14, seguro: 3, confiabilidad: 2, prestigio: 3, duracion: 1, puntaje: 2.54 },
+    { rank: 9,  emp: "iTravel", dest: "Camboriú", pais: "Brasil", noches: 7, moneda: "USD", precioMin: 1839, precioMax: 1949, clpNoche: 257043, valor: 3.52, seguro: 4, confiabilidad: 3, prestigio: 3, duracion: 5, puntaje: 3.66 }
+];
+
+
 const selectDest = document.getElementById("selDest");
 [...new Set(programas.map(p => p.dest))].sort().forEach(d => {
     const opt = document.createElement("option");
@@ -531,6 +602,64 @@ function renderRanking() {
     `).join("");
 }
 
+function formatPrecio(r) {
+    const fmt = n => n.toLocaleString("es-CL");
+    if (r.moneda === "USD") {
+        return r.precioMin === r.precioMax ? `USD ${fmt(r.precioMin)}` : `USD ${fmt(r.precioMin)} - ${fmt(r.precioMax)}`;
+    }
+    return r.precioMin === r.precioMax ? `$${fmt(r.precioMin)}` : `$${fmt(r.precioMin)} - $${fmt(r.precioMax)}`;
+}
+
+function renderRiesgoExcel() {
+    const orden = document.getElementById("selOrdenExcel").value;
+    const txt = normalizar(document.getElementById("txtRiesgoExcel").value.trim());
+
+    let filtrados = evaluacionGeneral.filter(r => !txt ||
+        normalizar(r.emp).includes(txt) || normalizar(r.dest).includes(txt) || normalizar(r.pais).includes(txt));
+
+    const metricas = [
+        { key: "valor", label: "Valor (CLP/noche)" },
+        { key: "seguro", label: "Seguro" },
+        { key: "confiabilidad", label: "Confiabilidad" },
+        { key: "prestigio", label: "Prestigio" },
+        { key: "duracion", label: "Duración" }
+    ];
+
+    if (orden === "ranking") {
+        filtrados = [...filtrados].sort((a, b) => a.rank - b.rank);
+    } else {
+        filtrados = [...filtrados].sort((a, b) => b[orden] - a[orden]);
+    }
+
+    document.getElementById("cantRiesgoExcel").textContent = filtrados.length;
+
+    document.getElementById("cardsRiesgoExcel").innerHTML = filtrados.map(r => `
+        <div class="card">
+            <div class="card-header">
+                <div class="empresa-info">
+                    <h3>#${r.rank} · ${r.emp}</h3>
+                    <div class="destino-lbl">📍 ${r.dest} (${r.pais}) · ${r.noches} noches</div>
+                </div>
+                <span class="rank-avg" style="background:${colorPuntaje(r.puntaje)}22; color:${colorPuntaje(r.puntaje)};">
+                    ${r.puntaje.toFixed(2)} / 5
+                </span>
+            </div>
+            <div class="card-body">
+                <p><b>💰 Precio:</b> ${formatPrecio(r)} · <b>CLP/noche:</b> $${r.clpNoche.toLocaleString("es-CL")}</p>
+                ${metricas.map(m => `
+                    <div class="rank-metric">
+                        <span class="rank-label">${m.label}</span>
+                        <div class="rank-bar-bg">
+                            <div class="rank-bar-fill" style="width:${(r[m.key] / 5) * 100}%; background:${colorPuntaje(r[m.key])};"></div>
+                        </div>
+                        <span class="rank-num">${r[m.key].toFixed(1)}</span>
+                    </div>
+                `).join("")}
+            </div>
+        </div>
+    `).join("");
+}
+
 function cambiarTab(tab) {
     document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
     document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
@@ -549,6 +678,7 @@ renderBeneficios();
 renderRiesgos();
 renderChipsEmpresas();
 renderRanking();
+renderRiesgoExcel();
 
 // Toggle para el bloque estático de iTravel (fuera del render dinámico de #cards)
 document.querySelector('[data-toggle="itravel"]').addEventListener("click", () => {
